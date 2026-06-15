@@ -196,6 +196,10 @@ namespace winrt = ::winrt;
 #define EDGE_RESIZE_PROCESS_DIAG 0
 #endif
 
+#ifndef EDGE_RESIZE_FILE_DIAG
+#define EDGE_RESIZE_FILE_DIAG 0
+#endif
+
 #ifndef EDGE_RESIZE_RUNNING_INDICATOR_EXPERIMENT
 #define EDGE_RESIZE_RUNNING_INDICATOR_EXPERIMENT 0
 #endif
@@ -2674,7 +2678,8 @@ bool EdgeResizeGetDiagLogDirPath(WCHAR* logDir, DWORD logDirCch) {
     }
 
     WCHAR rootDir[MAX_PATH]{};
-    _snwprintf_s(rootDir, _TRUNCATE, L"%s\\WindhawkTaskbarLab", baseDir);
+    _snwprintf_s(rootDir, _TRUNCATE,
+                 L"%s\\DraggableMultirowTaskbarSystray", baseDir);
     CreateDirectoryW(rootDir, nullptr);
 
     _snwprintf_s(logDir, logDirCch, _TRUNCATE, L"%s\\Logs", rootDir);
@@ -2692,6 +2697,7 @@ std::wstring EdgeResizeGetDiagLogDir() {
 }
 
 void EdgeResizeLog(PCWSTR format, ...) {
+#if EDGE_RESIZE_FILE_DIAG || EDGE_RESIZE_PROCESS_DIAG
     std::wstring logDir = EdgeResizeGetDiagLogDir();
 
     SYSTEMTIME st{};
@@ -2734,6 +2740,9 @@ void EdgeResizeLog(PCWSTR format, ...) {
                  L"\\draggable-multirow-taskbar-systray-windows-11-pid-%lu.log",
                  GetCurrentProcessId());
     writeLog(logDir + pidLogName);
+#endif
+#else
+    UNREFERENCED_PARAMETER(format);
 #endif
 }
 
@@ -3303,100 +3312,6 @@ void EdgeResizeTouchModSettings(PCWSTR modSubKey) {
     RegCloseKey(key);
 }
 
-bool EdgeResizeSetDwordIfChanged(HKEY key, PCWSTR valueName, DWORD value) {
-    DWORD type = 0;
-    DWORD existing = 0;
-    DWORD existingSize = sizeof(existing);
-    if (RegQueryValueExW(key, valueName, nullptr, &type,
-                         reinterpret_cast<BYTE*>(&existing),
-                         &existingSize) == ERROR_SUCCESS &&
-        type == REG_DWORD && existingSize == sizeof(existing) &&
-        existing == value) {
-        return false;
-    }
-
-    LSTATUS status =
-        RegSetValueExW(key, valueName, 0, REG_DWORD,
-                       reinterpret_cast<const BYTE*>(&value), sizeof(value));
-    if (status != ERROR_SUCCESS) {
-        EdgeResizeLog(L"settings sync dword failed name=%s value=%lu "
-                      L"status=%ld",
-                      valueName, value, status);
-        return false;
-    }
-
-    return true;
-}
-
-bool EdgeResizeSetStringIfChanged(HKEY key, PCWSTR valueName, PCWSTR value) {
-    WCHAR existing[64]{};
-    DWORD type = 0;
-    DWORD existingSize = sizeof(existing);
-    if (RegQueryValueExW(key, valueName, nullptr, &type,
-                         reinterpret_cast<BYTE*>(existing),
-                         &existingSize) == ERROR_SUCCESS &&
-        type == REG_SZ && wcscmp(existing, value) == 0) {
-        return false;
-    }
-
-    DWORD valueBytes =
-        static_cast<DWORD>((wcslen(value) + 1) * sizeof(wchar_t));
-    LSTATUS status =
-        RegSetValueExW(key, valueName, 0, REG_SZ,
-                       reinterpret_cast<const BYTE*>(value), valueBytes);
-    if (status != ERROR_SUCCESS) {
-        EdgeResizeLog(L"settings sync string failed name=%s value=%s "
-                      L"status=%ld",
-                      valueName, value, status);
-        return false;
-    }
-
-    return true;
-}
-
-#ifdef WIN11_TASKBAR_WIN10_MULTIROW_COMBINED
-constexpr PCWSTR kEdgeResizeCombinedModSubKey =
-    L"SOFTWARE\\Windhawk\\Engine\\Mods\\" WH_MOD_ID;
-constexpr PCWSTR kEdgeResizeCombinedSettingsSubKey =
-    L"SOFTWARE\\Windhawk\\Engine\\Mods\\" WH_MOD_ID L"\\Settings";
-
-void EdgeResizeSyncCombinedSettings(int height,
-                                    int rows,
-                                    int notificationIconRows) {
-    HKEY key{};
-    LSTATUS openStatus =
-        RegCreateKeyExW(HKEY_LOCAL_MACHINE, kEdgeResizeCombinedSettingsSubKey,
-                        0, nullptr, 0, KEY_QUERY_VALUE | KEY_SET_VALUE,
-                        nullptr, &key, nullptr);
-    if (openStatus != ERROR_SUCCESS) {
-        EdgeResizeLog(L"settings sync open failed subKey=%s status=%ld",
-                      kEdgeResizeCombinedSettingsSubKey, openStatus);
-        return;
-    }
-
-    bool changed = false;
-    PCWSTR trayLayoutMode =
-        notificationIconRows > 1 ? L"realWrapGrid" : L"nativeStack";
-    changed |= EdgeResizeSetDwordIfChanged(
-        key, L"TaskbarHeight", static_cast<DWORD>(height));
-    changed |= EdgeResizeSetDwordIfChanged(key, L"rows",
-                                           static_cast<DWORD>(rows));
-    changed |= EdgeResizeSetDwordIfChanged(
-        key, L"notificationIconRows",
-        static_cast<DWORD>(notificationIconRows));
-    changed |=
-        EdgeResizeSetStringIfChanged(key, L"trayLayoutMode", trayLayoutMode);
-    RegCloseKey(key);
-
-    if (changed) {
-        EdgeResizeLog(L"settings sync changed height=%d rows=%d "
-                      L"notificationRows=%d trayLayoutMode=%s",
-                      height, rows, notificationIconRows, trayLayoutMode);
-        EdgeResizeTouchModSettings(kEdgeResizeCombinedModSubKey);
-    }
-}
-#endif
-
 void EdgeResizePersistHeightAndRows(int height) {
     Wh_SetIntValue(L"EdgeResizeTaskbarHeight", height);
 
@@ -3406,7 +3321,6 @@ void EdgeResizePersistHeightAndRows(int height) {
     int notificationIconRows = rows;
     Wh_SetIntValue(L"EdgeResizeRows", rows);
     Wh_SetIntValue(L"EdgeResizeNotificationIconRows", notificationIconRows);
-    EdgeResizeSyncCombinedSettings(height, rows, notificationIconRows);
 #else
     HKEY key{};
     if (RegCreateKeyExW(
@@ -5360,6 +5274,10 @@ void RequestTaskbarRowsRefresh();
 void ApplyTaskbarRowsRefreshPass(PCWSTR reason);
 void ApplySettings(HWND hTaskbarWnd);
 
+#ifndef EDGE_RESIZE_FILE_DIAG
+#define EDGE_RESIZE_FILE_DIAG 0
+#endif
+
 bool BuildMultirowDiagPath(WCHAR* path, DWORD pathCount) {
     if (!path || pathCount == 0) {
         return false;
@@ -5381,6 +5299,7 @@ bool BuildMultirowDiagPath(WCHAR* path, DWORD pathCount) {
 }
 
 void MultirowDiagLog(PCWSTR format, ...) {
+#if EDGE_RESIZE_FILE_DIAG
     int lineIndex = g_multirowDiagLineCount.fetch_add(1);
     if (lineIndex > 3000) {
         return;
@@ -5424,6 +5343,9 @@ void MultirowDiagLog(PCWSTR format, ...) {
     }
 
     CloseHandle(file);
+#else
+    UNREFERENCED_PARAMETER(format);
+#endif
 }
 
 #ifndef WIN11_TASKBAR_WIN10_MULTIROW_COMBINED

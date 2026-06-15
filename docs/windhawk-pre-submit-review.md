@@ -18,7 +18,7 @@ Windhawk upstream submission should be a pull request to
 - GitHub: `https://github.com/andkondev`
 - Homepage: `https://andkon.dev/`
 - License: `GPL-3.0`
-- SHA-256: `435B155A30CF17655D69F862EBAD1A4ECE41D42A5AE2E7A8C5337706DD499F01`
+- SHA-256: `D6AD7C3B9BDA6F13463A9A6352ACB24972902AAD8788D3A4E04E6F06AB98D712`
 
 ## Public Assets
 
@@ -70,4 +70,3 @@ clock, overflow, and native one-row fallback behavior remain separate.
 Known limitations are documented in the mod details/readme, including the full
 Windows Search box flyout overlap on multirow taskbars.
 ```
-
