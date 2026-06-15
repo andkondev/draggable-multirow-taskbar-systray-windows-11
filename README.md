@@ -21,21 +21,34 @@ without running several separate taskbar mods at once.
 - Use hardcoded integrated defaults; resize by dragging the taskbar edge rather
   than changing Windhawk settings.
 
-## Install
+## Manual install
 
-The public Windhawk mod file is:
+This mod is not currently listed in the official Windhawk catalog. Install it as
+a local/custom Windhawk mod from the single source file in this repository.
+
+1. Install Windhawk from <https://windhawk.net/>.
+2. Open the raw mod source:
+   <https://raw.githubusercontent.com/andkondev/draggable-multirow-taskbar-systray-windows-11/main/mods/draggable-multirow-taskbar-systray-windows-11.wh.cpp>
+3. In Windhawk, create a new local/custom mod from source.
+4. Paste the contents of the raw `.wh.cpp` file into the Windhawk editor.
+5. Compile the mod in Windhawk.
+6. Exit editing mode and enable the local mod.
+
+The mod starts conservatively at one taskbar row. After enabling it, drag the
+top edge of the taskbar upward to add rows, or downward to return to fewer rows.
+
+The source file to install is:
 
 ```text
 mods/draggable-multirow-taskbar-systray-windows-11.wh.cpp
 ```
 
-Until the mod is listed on Windhawk, install it as a local/custom Windhawk mod
-from that file. Once it is accepted upstream, this repository should match the
-same mod id:
+The Windhawk mod id is `draggable-multirow-taskbar-systray-windows-11`.
 
-```text
-draggable-multirow-taskbar-systray-windows-11
-```
+To update an existing local install, replace the source in Windhawk with the
+latest raw file contents and compile again. If the taskbar does not refresh
+cleanly after enabling, disabling, or updating, restart Explorer or sign out and
+back in.
 
 ## Notes and limitations
 
