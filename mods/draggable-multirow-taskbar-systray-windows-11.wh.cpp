@@ -20164,10 +20164,10 @@ void RestoreCustomizationsForVisualStateGroup(
 // https://github.com/ramensoftware/windows-11-taskbar-styling-guide/issues/507
 void HookFirstTaskbarFrameLayoutWorkaround(
     winrt::Windows::UI::Xaml::FrameworkElement element) {
-            if (g_workaroundSizeChangedRevoker) {
+        if (g_workaroundSizeChangedRevoker) {
             return;
         }
-        
+
     if (winrt::get_class_name(element) != L"Taskbar.TaskbarFrame") {
         return;
     }

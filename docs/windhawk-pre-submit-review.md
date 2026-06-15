@@ -18,7 +18,7 @@ Windhawk upstream submission should be a pull request to
 - GitHub: `https://github.com/andkondev`
 - Homepage: `https://andkon.dev/`
 - License: `GPL-3.0`
-- SHA-256: `D6AD7C3B9BDA6F13463A9A6352ACB24972902AAD8788D3A4E04E6F06AB98D712`
+- SHA-256: `E808EA8F62C639268F3FA25FDFC357066A913A86382F851A3F4DA800D0F21693`
 
 ## Public Assets
 
