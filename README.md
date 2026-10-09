@@ -20,6 +20,7 @@ without running several separate taskbar mods at once.
   hover behavior as part of the integrated setup.
 - Use hardcoded integrated defaults; resize by dragging the taskbar edge rather
   than changing Windhawk settings.
+- Work with the Windows taskbar auto-hide setting.
 
 ## Manual install
 

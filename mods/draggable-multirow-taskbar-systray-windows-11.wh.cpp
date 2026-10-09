@@ -3224,6 +3224,17 @@ bool EdgeResizeWaitForTaskbarHeight(int targetHeight, DWORD timeoutMs) {
     return false;
 }
 
+// Auto-hide support: when the taskbar is auto-hidden it sits just below the
+// monitor edge. The resize grip must not cover the sliver that reveals it.
+bool EdgeResizeTaskbarIsAutoHidden(HWND hTaskbarWnd, const RECT& rect) {
+    HMONITOR monitor = MonitorFromWindow(hTaskbarWnd, MONITOR_DEFAULTTONEAREST);
+    MONITORINFO mi{sizeof(mi)};
+    if (!monitor || !GetMonitorInfoW(monitor, &mi)) {
+        return false;
+    }
+    return rect.top >= mi.rcMonitor.bottom - 8;
+}
+
 bool EdgeResizePointInGrip(HWND hWnd, POINT ptScreen) {
     if (!g_settings.edgeResizeEnabled || g_unloading || IsVerticalTaskbar()) {
         return false;
@@ -3236,6 +3247,10 @@ bool EdgeResizePointInGrip(HWND hWnd, POINT ptScreen) {
 
     RECT rect{};
     if (!GetWindowRect(hTaskbarWnd, &rect)) {
+        return false;
+    }
+
+    if (EdgeResizeTaskbarIsAutoHidden(hTaskbarWnd, rect)) {
         return false;
     }
 
@@ -3263,6 +3278,10 @@ bool EdgeResizePointInGripScreen(POINT ptScreen, HWND* taskbarWnd = nullptr) {
 
     RECT rect{};
     if (!GetWindowRect(hTaskbarWnd, &rect)) {
+        return false;
+    }
+
+    if (EdgeResizeTaskbarIsAutoHidden(hTaskbarWnd, rect)) {
         return false;
     }
 
@@ -3810,8 +3829,41 @@ void EdgeResizeUpdateGripWindowPosition() {
         return;
     }
 
+    // Auto-hide support: Explorer does not apply the saved auto-hide state at
+    // startup while this mod is loaded. Keep our own copy of the user's choice
+    // and re-apply it for a short time after the taskbar appears. Later changes
+    // made through Windows Settings are detected and remembered.
+    static HWND s_autoHideFor = nullptr;
+    static ULONGLONG s_autoHideFirstSeen = 0;
+    if (hTaskbarWnd != s_autoHideFor) {
+        s_autoHideFor = hTaskbarWnd;
+        s_autoHideFirstSeen = GetTickCount64();
+    }
+    {
+        APPBARDATA abd{sizeof(abd)};
+        abd.hWnd = hTaskbarWnd;
+        UINT cur = (UINT)SHAppBarMessage(ABM_GETSTATE, &abd);
+        int wanted = Wh_GetIntValue(L"EdgeResizeAutoHide", -1);
+        if (GetTickCount64() - s_autoHideFirstSeen < 45000) {
+            if (wanted == 1 && !(cur & ABS_AUTOHIDE)) {
+                abd.lParam = ABS_AUTOHIDE | ABS_ALWAYSONTOP;
+                SHAppBarMessage(ABM_SETSTATE, &abd);
+            }
+        } else {
+            int now = (cur & ABS_AUTOHIDE) ? 1 : 0;
+            if (wanted != now) {
+                Wh_SetIntValue(L"EdgeResizeAutoHide", now);
+            }
+        }
+    }
+
     RECT rect{};
     if (!GetWindowRect(hTaskbarWnd, &rect)) {
+        ShowWindow(g_edgeResizeGripWnd, SW_HIDE);
+        return;
+    }
+
+    if (EdgeResizeTaskbarIsAutoHidden(hTaskbarWnd, rect)) {
         ShowWindow(g_edgeResizeGripWnd, SW_HIDE);
         return;
     }
