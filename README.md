@@ -20,6 +20,8 @@ without running several separate taskbar mods at once.
   hover behavior as part of the integrated setup.
 - Use hardcoded integrated defaults; resize by dragging the taskbar edge rather
   than changing Windhawk settings.
+- Leave the auto-hide reveal strip accessible while the taskbar is hidden.
+  Windows remains responsible for the auto-hide preference.
 
 ## Manual install
 

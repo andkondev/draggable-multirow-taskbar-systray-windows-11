@@ -3224,6 +3224,27 @@ bool EdgeResizeWaitForTaskbarHeight(int targetHeight, DWORD timeoutMs) {
     return false;
 }
 
+// Leave Windows' auto-hide reveal strip unobstructed. Use the taskbar's own
+// monitor and DPI, including monitors with nonzero/negative desktop origins.
+// This is only a geometry check: Windows owns the user's auto-hide preference.
+bool EdgeResizeTaskbarHasUsableGrip(HWND hTaskbarWnd, const RECT& rect) {
+    MONITORINFO monitorInfo{sizeof(monitorInfo)};
+    HMONITOR monitor = MonitorFromWindow(hTaskbarWnd, MONITOR_DEFAULTTONEAREST);
+    RECT visibleRect{};
+    if (!monitor || !GetMonitorInfoW(monitor, &monitorInfo) ||
+        !IntersectRect(&visibleRect, &rect, &monitorInfo.rcMonitor)) {
+        return false;
+    }
+
+    UINT dpi = GetDpiForWindow(hTaskbarWnd);
+    int gripPixels = MulDiv(g_settings.edgeResizeGripPixels, dpi ? dpi : 96, 96);
+    if (gripPixels < 2) {
+        gripPixels = 2;
+    }
+
+    return visibleRect.bottom - visibleRect.top > gripPixels;
+}
+
 bool EdgeResizePointInGrip(HWND hWnd, POINT ptScreen) {
     if (!g_settings.edgeResizeEnabled || g_unloading || IsVerticalTaskbar()) {
         return false;
@@ -3235,7 +3256,8 @@ bool EdgeResizePointInGrip(HWND hWnd, POINT ptScreen) {
     }
 
     RECT rect{};
-    if (!GetWindowRect(hTaskbarWnd, &rect)) {
+    if (!GetWindowRect(hTaskbarWnd, &rect) ||
+        !EdgeResizeTaskbarHasUsableGrip(hTaskbarWnd, rect)) {
         return false;
     }
 
@@ -3262,7 +3284,8 @@ bool EdgeResizePointInGripScreen(POINT ptScreen, HWND* taskbarWnd = nullptr) {
     }
 
     RECT rect{};
-    if (!GetWindowRect(hTaskbarWnd, &rect)) {
+    if (!GetWindowRect(hTaskbarWnd, &rect) ||
+        !EdgeResizeTaskbarHasUsableGrip(hTaskbarWnd, rect)) {
         return false;
     }
 
@@ -3811,7 +3834,8 @@ void EdgeResizeUpdateGripWindowPosition() {
     }
 
     RECT rect{};
-    if (!GetWindowRect(hTaskbarWnd, &rect)) {
+    if (!GetWindowRect(hTaskbarWnd, &rect) ||
+        !EdgeResizeTaskbarHasUsableGrip(hTaskbarWnd, rect)) {
         ShowWindow(g_edgeResizeGripWnd, SW_HIDE);
         return;
     }
