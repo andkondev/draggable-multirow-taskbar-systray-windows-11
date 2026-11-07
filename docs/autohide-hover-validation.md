@@ -11,6 +11,11 @@ Normal dragging resumes when the taskbar is visible. The change does not write
 the Windows auto-hide state, retain a separate preference, or enforce a startup
 timer.
 
+Thanks to BSingels for the report and Shaerif for identifying the resize-grip
+overlap in [PR #2](https://github.com/andkondev/draggable-multirow-taskbar-systray-windows-11/pull/2).
+This implementation uses monitor intersection and a DPI-scaled grip threshold;
+it does not include that PR's separate saved preference or 45-second override.
+
 ## Physical-device verification — November 6, 2026
 
 Windows 11 build 26300.9711 with Windhawk 1.7.3:
@@ -71,3 +76,20 @@ one-screen .NET monitor list after extending the desktop. The harness was fixed
 to enumerate current monitors through Windows before the successful two-screen
 test. Screenshots and JSON measurements are retained locally with active DLL,
 screen coordinates, DPI, taskbar geometry, row settings and cursor positions.
+
+## Follow-up manual confirmation
+
+After the initial test session and restoration, the maintainer personally
+reproduced the original primary-screen hover failure with the original build,
+two extended displays, two rows, and auto-hide enabled. The tested fix was then
+installed again, with its source and DLL hashes verified. The maintainer
+confirmed that hovering at each screen's bottom edge revealed its taskbar.
+The fixed build remains installed for further manual use.
+
+During this later installation, the original Explorer shell did not complete
+an orderly exit. The waiting setup worker was stopped, the shell was terminated,
+and the build was switched while it was stopped. Auto-hide was explicitly
+reapplied afterward, so this comparison is not an additional preference-
+persistence test. No Explorer Application Error/WER crash events were recorded
+during the installation, and the temporary setup tasks/workers were removed.
+The reboot/logon and live-unload coverage limits above still apply.
